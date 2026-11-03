@@ -104,18 +104,22 @@ function horse() {
   const L = '#5a4237', cream = '#fbf3e4', creamShade = '#ead9bd', spot = '#d6ad7f', mane = '#c3946a', maneDark = '#a57a54', hoof = '#8d6e5c', muzzle = '#efd3c3';
   const st = (w = 2.2) => `stroke="${L}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
   const body = 'M74 104 C72 86 90 76 118 76 C146 76 172 74 190 84 C205 92 207 116 199 130 C192 141 172 144 150 141 C126 138 100 141 86 135 C76 130 75 116 74 104 Z';
-  const neck = 'M70 112 C60 96 56 76 60 60 C63 48 70 40 82 36 C94 42 101 54 104 66 C107 80 104 92 100 102 Z';
+  // Encolure : de la mâchoire au poitrail (devant) et de la nuque au garrot (dessus), raccordée au corps.
+  const throat = 'M60 66 C64 80 70 94 74 108';
+  const crest = 'M84 40 C98 52 108 64 118 78';
+  const neck = `${throat} L100 112 L118 78 C108 64 98 52 84 40 Z`;
   const head = 'M86 38 C82 26 70 20 58 24 C46 28 33 42 25 57 C21 65 23 75 32 77 C41 79 50 74 58 68 C67 61 76 54 83 48 C88 44 89 41 86 38 Z';
   const spots = `<path d="M118 82 C128 76 146 80 148 92 C150 104 132 108 122 102 C114 98 110 88 118 82 Z"/>
     <path d="M170 92 C180 88 194 96 192 110 C190 122 176 124 170 116 C164 108 162 96 170 92 Z"/>
     <path d="M136 116 C142 112 152 116 150 124 C148 130 138 130 135 125 Z"/>
-    <path d="M84 58 C90 54 96 62 94 70 C92 78 84 78 82 70 C81 64 80 61 84 58 Z"/>`;
+    <!-- trèfle (sans tige) sur le flanc gauche -->
+    <circle cx="104" cy="115.5" r="6.2"/><circle cx="97.4" cy="124.5" r="6.2"/><circle cx="110.6" cy="124.5" r="6.2"/><circle cx="104" cy="121.5" r="4.5"/>`;
   // jambe : haut large, genou, canon fin, boulet arrondi
   const leg = (x, top, shade) => `<path d="M${x - 1} ${top} C${x - 1} ${top + 14} ${x + 1} 144 ${x + 2} 152 C${x + 3} 158 ${x + 2} 164 ${x + 1} 168 C${x - 1} 171 ${x} 175 ${x + 1} 176 L${x + 15} 176 C${x + 16} 172 ${x + 15} 169 ${x + 13} 166 C${x + 12} 160 ${x + 12} 156 ${x + 13} 150 C${x + 15} 142 ${x + 17} ${top + 14} ${x + 17} ${top} Z" fill="${shade}" ${st()}/>
     <path d="M${x - 1} 174 L${x + 16} 174 L${x + 18} 184 C${x + 12} 186 ${x + 3} 186 ${x - 3} 184 Z" fill="${hoof}" ${st()}/>
     <path d="M${x + 2} 162 C${x + 6} 166 ${x + 11} 166 ${x + 14} 162" fill="none" stroke="${creamShade}" stroke-width="2" stroke-linecap="round"/>`;
   return `<defs>
-      <linearGradient id="${id}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf1"/><stop offset=".6" stop-color="${cream}"/><stop offset="1" stop-color="${creamShade}"/></linearGradient>
+      <linearGradient id="${id}b" gradientUnits="userSpaceOnUse" x1="0" y1="10" x2="0" y2="150"><stop offset="0" stop-color="#fffaf1"/><stop offset=".6" stop-color="${cream}"/><stop offset="1" stop-color="${creamShade}"/></linearGradient>
       <linearGradient id="${id}m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${mane}"/><stop offset="1" stop-color="${maneDark}"/></linearGradient>
       <clipPath id="${id}cb"><path d="${body}"/></clipPath><clipPath id="${id}cn"><path d="${neck}"/></clipPath>
     </defs>
@@ -128,10 +132,11 @@ function horse() {
     <!-- jambes du côté visible : sous le corps, qui recouvre leur haut -->
     ${leg(80, 120, cream)}${leg(180, 120, cream)}
     <path d="M181 152 C186 156 192 156 195 152" fill="${spot}" opacity=".9"/>
-    <!-- encolure, corps -->
-    <path d="${neck}" fill="url(#${id}b)" ${st()}/>
+    <!-- corps, puis encolure par-dessus (sans contour en bas : pas de couture visible) -->
     <path d="${body}" fill="url(#${id}b)" ${st()}/>
     <g clip-path="url(#${id}cb)" fill="${spot}">${spots}</g>
+    <path d="${neck}" fill="url(#${id}b)"/>
+    <path d="${throat}" fill="none" ${st()}/><path d="${crest}" fill="none" ${st()}/>
     <g clip-path="url(#${id}cn)" fill="${spot}"><path d="M84 58 C90 54 96 62 94 70 C92 78 84 78 82 70 C81 64 80 61 84 58 Z"/></g>
     <path d="M150 136 C164 134 180 132 192 124" fill="none" stroke="${creamShade}" stroke-width="3" stroke-linecap="round"/>
     <path d="M176 92 C186 100 190 112 186 124" fill="none" stroke="${L}" stroke-width="1.8" stroke-linecap="round" opacity=".5"/>
