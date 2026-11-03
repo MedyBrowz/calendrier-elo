@@ -1,0 +1,17 @@
+{
+  "name": "Notre Calendrier",
+  "short_name": "Calendrier",
+  "description": "Le planning d'Élodie, nos sorties à deux et nos photos.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1113",
+  "theme_color": "#0f1113",
+  "icons": [
+    { "src": "icons/app-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/app-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/app-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
