@@ -109,9 +109,10 @@ function horse() {
   const crest = 'M84 40 C98 52 108 64 118 78';
   const neck = `${throat} L100 112 L118 78 C108 64 98 52 84 40 Z`;
   const head = 'M86 38 C82 26 70 20 58 24 C46 28 33 42 25 57 C21 65 23 75 32 77 C41 79 50 74 58 68 C67 61 76 54 83 48 C88 44 89 41 86 38 Z';
-  // trèfle à quatre feuilles (sans tige) à l'épaule : quatre ronds écartés du centre (échancrures
-  // profondes entre les feuilles), reliés par un petit rond central
-  const spots = `<circle cx="132" cy="85" r="6.4"/><circle cx="141" cy="94" r="6.4"/><circle cx="132" cy="103" r="6.4"/><circle cx="123" cy="94" r="6.4"/><circle cx="132" cy="94" r="4.1"/>
+  // trèfle à quatre feuilles (sans tige) à l'épaule : quatre feuilles rondes en X,
+  // bien échancrées, reliées au centre
+  const spots = `<g transform="translate(132 94)">${[45, 135, 225, 315]
+    .map((a) => `<ellipse cx="0" cy="-9.2" rx="6.6" ry="7.2" transform="rotate(${a})"/>`).join('')}<circle r="3.7"/></g>
     <path d="M170 92 C180 88 194 96 192 110 C190 122 176 124 170 116 C164 108 162 96 170 92 Z"/>
     <path d="M136 116 C142 112 152 116 150 124 C148 130 138 130 135 125 Z"/>`;
   // jambe : haut large, genou, canon fin, boulet arrondi
