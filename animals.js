@@ -125,6 +125,9 @@ function horse() {
     <path d="M204 104 C212 120 214 140 208 162 M198 112 C204 128 204 146 200 166" fill="none" stroke="${maneDark}" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>
     <!-- jambes du fond -->
     ${leg(98, 124, creamShade)}${leg(168, 126, creamShade)}
+    <!-- jambes du côté visible : sous le corps, qui recouvre leur haut -->
+    ${leg(80, 120, cream)}${leg(180, 120, cream)}
+    <path d="M181 152 C186 156 192 156 195 152" fill="${spot}" opacity=".9"/>
     <!-- encolure, corps -->
     <path d="${neck}" fill="url(#${id}b)" ${st()}/>
     <path d="${body}" fill="url(#${id}b)" ${st()}/>
@@ -132,9 +135,6 @@ function horse() {
     <g clip-path="url(#${id}cn)" fill="${spot}"><path d="M84 58 C90 54 96 62 94 70 C92 78 84 78 82 70 C81 64 80 61 84 58 Z"/></g>
     <path d="M150 136 C164 134 180 132 192 124" fill="none" stroke="${creamShade}" stroke-width="3" stroke-linecap="round"/>
     <path d="M176 92 C186 100 190 112 186 124" fill="none" stroke="${L}" stroke-width="1.8" stroke-linecap="round" opacity=".5"/>
-    <!-- jambes de devant -->
-    ${leg(80, 120, cream)}${leg(180, 120, cream)}
-    <path d="M181 152 C186 156 192 156 195 152" fill="${spot}" opacity=".9"/>
     <!-- crinière -->
     <path d="M84 30 C96 30 104 40 108 52 C112 64 114 74 117 84 C110 82 106 78 103 72 C104 80 104 86 103 92 C97 86 94 78 93 70 C90 76 88 80 84 84 C84 74 86 64 88 56 C84 58 80 60 76 60 C80 52 84 44 84 30 Z" fill="url(#${id}m)" ${st()}/>
     <path d="M90 40 C96 48 100 58 104 70 M86 46 C90 54 92 62 94 70" fill="none" stroke="${maneDark}" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>
