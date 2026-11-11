@@ -227,15 +227,55 @@ textarea.input { min-height: 70px; resize: vertical; }
 .radio input { accent-color: var(--accent); }
 .radio small { display: block; color: var(--muted); }
 
+/* ------------------------------------------- listes, questions, rappels, vacances */
+.title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.title-row h2 { margin-bottom: 10px; }
+.primary.small { flex: none; padding: 8px 14px; font-size: 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+.pill { border: 0; background: var(--card); color: var(--text); border-radius: 999px; padding: 7px 13px; font-weight: 700; font-size: 13px; box-shadow: var(--shadow); }
+.pill b { background: var(--accent); color: #fff; border-radius: 999px; padding: 0 6px; font-size: 11px; margin-left: 2px; }
+.pill.on { background: var(--accent); color: #fff; }
+.pill.on b { background: #fff; color: var(--accent); }
+.pill.add { color: var(--accent); font-size: 16px; padding: 5px 13px; }
+.add-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.add-row .input { flex: 1; }
+.add-row .primary { flex: none; min-width: 48px; font-size: 20px; padding: 8px 14px; }
+.answer-form .primary { font-size: 14px; }
+.row.item .tick {
+  flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid var(--work);
+  background: transparent; color: #fff; font-weight: 900; font-size: 14px; display: grid; place-items: center; padding: 0;
+}
+.row.item.done .tick { background: var(--work); }
+.row.item.done strong { text-decoration: line-through; color: var(--muted); }
+.faded { opacity: .75; }
+.row .x { flex: none; border: 0; background: transparent; color: var(--muted); width: 30px; height: 30px; border-radius: 50%; font-size: 13px; }
+.row .x:hover { background: var(--input); }
+.row-title { display: flex; justify-content: space-between; align-items: center; }
+.link { border: 0; background: transparent; color: var(--accent); font-weight: 800; padding: 4px 6px; font-size: 13px; }
+.card.question { display: flex; flex-direction: column; gap: 6px; }
+.card.question strong { font-size: 17px; }
+.card.question .sub { color: var(--muted); font-size: 12px; }
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 4px; }
+.choice { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--accent); border-radius: 14px; padding: 12px 10px; font-weight: 800; }
+.row .answer { display: block; color: var(--work); font-weight: 800; font-size: 14px; }
+.row .bell { font-size: 20px; flex: none; }
+.heart { flex: none; border: 0; background: var(--input); color: var(--muted); border-radius: 12px; padding: 6px 9px; font-size: 18px; line-height: 1; display: flex; align-items: center; gap: 3px; }
+.heart small { font-size: 12px; font-weight: 800; }
+.heart.on { background: var(--accent-soft); color: var(--accent); }
+.flash { animation: flash 1.6s ease-out 1; }
+@keyframes flash { 0%, 40% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: var(--shadow); } }
+.tabs button { position: relative; }
+.badge-dot { position: absolute; top: 4px; left: calc(50% + 6px); background: var(--accent); color: #fff; border-radius: 999px; font-size: 10px; min-width: 17px; height: 17px; line-height: 17px; padding: 0 4px; font-weight: 900; }
+
 /* ------------------------------------------------------------ navigation */
 .tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
-  display: grid; grid-template-columns: repeat(3, 1fr);
+  display: grid; grid-template-columns: repeat(5, 1fr);
   background: var(--panel); border-top: 1px solid var(--border);
   padding-bottom: var(--safe-bottom);
   box-shadow: 0 -4px 16px rgba(176, 112, 124, .08);
 }
-.tabs button { border: 0; background: transparent; color: var(--muted); padding: 9px 4px 11px; font-weight: 800; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.tabs button { border: 0; background: transparent; color: var(--muted); padding: 9px 2px 11px; font-weight: 800; font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .tabs button svg { width: 24px; height: 24px; }
 .tabs button.on { color: var(--accent); }
 .fab {

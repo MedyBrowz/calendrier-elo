@@ -165,10 +165,13 @@ function render() {
   if (!state.data) return;
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === state.tab));
   $('#fab').hidden = state.tab !== 'calendar';
+  updateQuestionBadge();
   if (state.tab === 'calendar') renderCalendar();
   else if (state.tab === 'memories') renderMemories();
   else if (state.tab === 'import') renderImport();
-  else renderSettings();
+  else if (state.tab === 'lists') renderLists();
+  else if (state.tab === 'questions') renderQuestions();
+  else renderMore();
 }
 
 function workTag(w) {
@@ -301,11 +304,13 @@ function renderMemories() {
   hydratePhotos(view);
 }
 
-function renderSettings() {
+/** Réglages (affichés en bas de l'onglet « Plus »). */
+function settingsHtml() {
   const used = usedBytes();
   const ratio = Math.min(1, used / QUOTA_BYTES);
-  view.innerHTML = `
+  return `
     <h2>Réglages</h2>
+    <div id="notif-card"></div>
     ${api.demo ? '<div class="card"><strong>Mode démo</strong><p class="muted">Données fictives, rien n’est enregistré. Recharge la page pour repartir de zéro.</p></div>' : ''}
     <div class="card">
       <strong>Planning d’Élodie</strong>
@@ -398,7 +403,7 @@ function renderImport() {
       Ou un Excel simplifié : Date | Début 1 | Fin 1 | Début 2 | Fin 2 | Statut.</p>
     <div class="actions">
       <label class="primary file-btn">${rows ? 'Choisir un autre fichier' : 'Choisir le fichier Excel'}<input type="file" id="import-file" accept=".xlsx" hidden></label>
-      <button class="secondary" type="button" data-tab="settings">Retour</button>
+      <button class="secondary" type="button" data-tab="more">Retour</button>
     </div>
     <p class="error-text" id="file-error"></p>
     ${body}`;
@@ -549,7 +554,7 @@ function eventSheet(id) {
 
 function eventForm(ev, date) {
   const e = ev || { title: '', start_date: date || todayIso(), end_date: date || todayIso(), start_time: null, end_time: null, location: '', note: '', color: 'rose' };
-  openSheet(`${sheetHead(ev ? 'Modifier l’événement' : 'Nouvel événement')}
+  openSheet(`${sheetHead(ev && ev.id ? 'Modifier l’événement' : 'Nouvel événement')}
     <label class="field" for="ev-title">Quoi ?</label>
     <input class="input" id="ev-title" maxlength="120" value="${esc(e.title)}" placeholder="Resto, ciné, week-end…" required>
     <div class="two">
@@ -858,10 +863,15 @@ function startApp(me) {
   if (!state.data) view.innerHTML = `<div class="loading">${animal('noir', 90)}<span>Chargement…</span></div>`;
   render();
   refresh(state.data === null);
+  syncPushSubscription();
 }
 
 async function boot() {
   if ('serviceWorker' in navigator && !DEMO && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Ouverture depuis une notification : ?q=<question> ou ?tab=<onglet>
+  const params = new URLSearchParams(location.search);
+  if (params.get('q')) { state.tab = 'questions'; duo.focusQuestion = params.get('q'); }
+  else if (['lists', 'questions', 'more', 'memories'].includes(params.get('tab'))) state.tab = params.get('tab');
   if (!api) { renderSetup(); return; }
   const me = await api.session();
   if (!me) { renderLogin(); return; }

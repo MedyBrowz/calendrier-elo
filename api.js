@@ -4,6 +4,15 @@
    - createDemoApi     : données fictives en mémoire (adresse terminée par ?demo), pour essayer. */
 
 const PAGE = 1000;
+/** Tables de la partie 2 (listes, questions…) : [table, colonnes, tri]. */
+const EXTRA_TABLES = {
+  lists: ['lists', 'id,name,icon,position', 'position'],
+  items: ['list_items', 'id,list_id,text,done,created_by,created_at', 'created_at'],
+  questions: ['questions', 'id,text,kind,options,from_user,to_user,answer,answered_at,created_at', 'created_at'],
+  reminders: ['reminders', 'id,title,note,next_at,local_time,repeat,private,owner,active,last_sent_at', 'next_at'],
+  ideas: ['vacation_ideas', 'id,title,note,done,created_by,created_at', 'created_at'],
+  votes: ['vacation_votes', 'idea_id,user_id', 'idea_id'],
+};
 
 function createSupabaseApi(url, key) {
   const sb = window.supabase.createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true } });
@@ -49,7 +58,13 @@ function createSupabaseApi(url, key) {
         fetchAll('events', 'id,title,start_date,end_date,start_time,end_time,location,note,color,created_by', 'start_date'),
         fetchAll('photos', 'id,event_id,path,width,height,size_bytes,created_at', 'created_at'),
       ]);
-      return { members, work, events, photos };
+      // Partie 2 : si elle n'est pas encore installée, le reste de l'appli continue de marcher.
+      const extra = {};
+      let missing = false;
+      await Promise.all(Object.entries(EXTRA_TABLES).map(async ([name, [table, cols, order]]) => {
+        try { extra[name] = await fetchAll(table, cols, order); } catch (e) { extra[name] = []; missing = true; }
+      }));
+      return { members, work, events, photos, ...extra, extraMissing: missing };
     },
     /** onlyNew : ne touche pas aux jours déjà présents. */
     async saveWorkDays(rows, onlyNew = false) {
@@ -89,6 +104,27 @@ function createSupabaseApi(url, key) {
       }
       return out;
     },
+    // --- partie 2 : écritures simples sur les tables (listes, questions, rappels, vacances)
+    async add(table, row) { return check(sb.from(table).insert(row).select().single()); },
+    async patch(table, id, fields) { await check(sb.from(table).update(fields).eq('id', id)); },
+    async del(table, match) { await check(sb.from(table).delete().match(match)); },
+    // --- notifications
+    async savePush(subscription) {
+      const j = subscription.toJSON();
+      await check(sb.from('push_subscriptions').upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: 'endpoint' }));
+    },
+    async removePush(endpoint) { await check(sb.from('push_subscriptions').delete().eq('endpoint', endpoint)); },
+    /** Demande au serveur d'envoyer la notification (question posée, réponse, test). */
+    async notify(type, id) {
+      const { data } = await sb.auth.getSession();
+      const res = await fetch(`${url}/functions/v1/notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: key, Authorization: `Bearer ${data.session.access_token}` },
+        body: JSON.stringify({ type, id }),
+      });
+      if (!res.ok) throw new Error(`Notification non envoyée (${res.status}).`);
+      return res.json();
+    },
   };
 }
 
@@ -98,6 +134,7 @@ function createDemoApi() {
   const ym = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
   const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const me = { id: 'demo-moi', email: 'demo@exemple.fr' };
+  const uid = () => crypto.randomUUID();
   const db = {
     members: [{ user_id: 'demo-moi', name: 'Moi' }, { user_id: 'demo-elo', name: 'Élodie' }],
     work: [], events: [], photos: [],
@@ -112,13 +149,42 @@ function createDemoApi() {
     }
   }
   db.events.push(
-    { id: crypto.randomUUID(), title: 'Resto italien', start_date: `${ym}-07`, end_date: `${ym}-07`, start_time: '20:00', end_time: null, location: 'Chez Luigi', note: '', color: 'rose', created_by: 'demo-moi' },
-    { id: crypto.randomUUID(), title: 'Week-end à la mer', start_date: `${ym}-21`, end_date: `${ym}-23`, start_time: null, end_time: null, location: 'Étretat', note: 'Penser aux chaussures de rando', color: 'bleu', created_by: 'demo-elo' },
+    { id: uid(), title: 'Resto italien', start_date: `${ym}-07`, end_date: `${ym}-07`, start_time: '20:00', end_time: null, location: 'Chez Luigi', note: '', color: 'rose', created_by: 'demo-moi' },
+    { id: uid(), title: 'Week-end à la mer', start_date: `${ym}-21`, end_date: `${ym}-23`, start_time: null, end_time: null, location: 'Étretat', note: 'Penser aux chaussures de rando', color: 'bleu', created_by: 'demo-elo' },
   );
+  // Partie 2
+  const lists = [['Courses', '🛒'], ['Pharmacie', '💊'], ['Animaux', '🐾'], ['Maison', '🏠']].map(([name, icon], position) => ({ id: uid(), name, icon, position }));
+  const stamp = (m) => new Date(Date.now() - m * 60000).toISOString();
+  Object.assign(db, {
+    lists,
+    items: [
+      { id: uid(), list_id: lists[0].id, text: 'Lait', done: false, created_by: 'demo-elo', created_at: stamp(50) },
+      { id: uid(), list_id: lists[0].id, text: 'Pâtes', done: true, created_by: 'demo-moi', created_at: stamp(40) },
+      { id: uid(), list_id: lists[2].id, text: 'Croquettes chats', done: false, created_by: 'demo-moi', created_at: stamp(30) },
+    ],
+    questions: [
+      { id: uid(), text: 'On mange quoi ce soir ?', kind: 'choice', options: ['Pâtes carbo', 'Sushis'], from_user: 'demo-elo', to_user: 'demo-moi', answer: null, answered_at: null, created_at: stamp(5) },
+      { id: uid(), text: 'Tu rentres à quelle heure ?', kind: 'open', options: [], from_user: 'demo-moi', to_user: 'demo-elo', answer: 'Vers 18h30', answered_at: stamp(60), created_at: stamp(90) },
+    ],
+    reminders: [
+      { id: uid(), title: 'Vermifuge des chats', note: '', next_at: new Date(Date.now() + 3 * 86400000).toISOString(), local_time: '09:00', repeat: 'monthly', private: false, owner: 'demo-moi', active: true, last_sent_at: null },
+    ],
+    ideas: [{ id: uid(), title: 'Rome', note: 'Printemps ?', done: false, created_by: 'demo-elo', created_at: stamp(500) },
+            { id: uid(), title: 'Montagne en été', note: '', done: false, created_by: 'demo-moi', created_at: stamp(400) }],
+    votes: [],
+  });
+  db.votes.push({ idea_id: db.ideas[0].id, user_id: 'demo-elo' });
+  const TABLE = { lists: 'lists', list_items: 'items', questions: 'questions', reminders: 'reminders', vacation_ideas: 'ideas', vacation_votes: 'votes' };
+  const DEFAULTS = {
+    list_items: { done: false, created_by: me.id }, questions: { options: [], from_user: me.id, answer: null, answered_at: null },
+    reminders: { repeat: 'none', private: false, owner: me.id, active: true, last_sent_at: null },
+    vacation_ideas: { done: false, created_by: me.id }, vacation_votes: { user_id: me.id }, lists: { icon: '📝', position: 99 },
+  };
   let version = 1;
   const blobs = new Map();
   const copy = (x) => JSON.parse(JSON.stringify(x));
   const wait = () => new Promise((r) => setTimeout(r, 120));
+  const matches = (row, match) => Object.entries(match).every(([k, v]) => row[k] === v);
 
   return {
     demo: true,
@@ -127,7 +193,7 @@ function createDemoApi() {
     async signOut() {},
     async changePassword() {},
     async version() { return version; },
-    async loadAll() { await wait(); return copy(db); },
+    async loadAll() { await wait(); return { ...copy(db), extraMissing: false }; },
     async saveWorkDays(rows, onlyNew = false) {
       for (const r of rows) {
         const i = db.work.findIndex((w) => w.day === r.day);
@@ -138,7 +204,7 @@ function createDemoApi() {
     async deleteWorkDay(day) { db.work = db.work.filter((w) => w.day !== day); version++; },
     async saveEvent(fields, id) {
       if (id) Object.assign(db.events.find((e) => e.id === id), copy(fields));
-      else { id = crypto.randomUUID(); db.events.push({ id, created_by: me.id, ...copy(fields) }); }
+      else { id = uid(); db.events.push({ id, created_by: me.id, ...copy(fields) }); }
       version++;
       return id;
     },
@@ -149,13 +215,30 @@ function createDemoApi() {
     },
     async uploadPhoto(eventId, image) {
       await wait();
-      const path = `${eventId}/${crypto.randomUUID()}.jpg`;
+      const path = `${eventId}/${uid()}.jpg`;
       blobs.set(path, URL.createObjectURL(image.blob));
-      db.photos.push({ id: crypto.randomUUID(), event_id: eventId, path, width: image.width, height: image.height,
+      db.photos.push({ id: uid(), event_id: eventId, path, width: image.width, height: image.height,
         size_bytes: image.blob.size, created_at: new Date().toISOString() });
       version++;
     },
     async deletePhoto(photo) { db.photos = db.photos.filter((p) => p.id !== photo.id); version++; },
     async photoUrls(paths) { return Object.fromEntries(paths.filter((p) => blobs.has(p)).map((p) => [p, blobs.get(p)])); },
+    async add(table, row) {
+      const full = { ...(table === 'vacation_votes' ? {} : { id: uid() }), created_at: new Date().toISOString(), ...DEFAULTS[table], ...copy(row) };
+      db[TABLE[table]].push(full);
+      version++;
+      return copy(full);
+    },
+    async patch(table, id, fields) { Object.assign(db[TABLE[table]].find((r) => r.id === id), copy(fields)); version++; },
+    async del(table, match) {
+      const key = TABLE[table];
+      db[key] = db[key].filter((r) => !matches(r, match));
+      if (table === 'lists') db.items = db.items.filter((i) => i.list_id !== match.id);
+      if (table === 'vacation_ideas') db.votes = db.votes.filter((v) => v.idea_id !== match.id);
+      version++;
+    },
+    async savePush() {},
+    async removePush() {},
+    async notify() { return { sent: 0 }; },
   };
 }
