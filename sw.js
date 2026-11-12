@@ -1,6 +1,6 @@
 // Service worker : l'appli s'ouvre instantanément (fichiers en cache) et se met à jour
 // en arrière-plan. Les données et les photos, elles, viennent toujours de Supabase.
-const CACHE = 'notre-calendrier-v5';
+const CACHE = 'notre-calendrier-v6';
 const SHELL = ['./', 'index.html', 'style.css', 'config.js', 'animals.js', 'api.js', 'excel.js', 'duo.js', 'app.js', 'manifest.webmanifest',
   'icons/app-192.png', 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js'];
 

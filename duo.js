@@ -201,7 +201,10 @@ function threadSheet(qid) {
     if (!text) throw new Error('Écris un message.');
     const msg = await api.add('question_messages', { question_id: qid, text });
     input.value = '';
-    api.notify('message', msg.id).catch(() => {});
+    // On prévient si la notification ne part pas (fonction pas à jour, ou notifications non activées chez l'autre).
+    api.notify('message', msg.id)
+      .then((r) => { if (!api.demo && !r.sent) toast('Message envoyé, mais l’autre n’a pas activé les notifications.'); })
+      .catch((e) => toast(`Message envoyé, mais pas de notification : ${e.message}`));
     return () => threadSheet(qid);
   });
   $('#sheet-form').dataset.thread = qid;

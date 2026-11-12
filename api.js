@@ -124,7 +124,10 @@ function createSupabaseApi(url, key) {
         headers: { 'Content-Type': 'application/json', apikey: key, Authorization: `Bearer ${data.session.access_token}` },
         body: JSON.stringify({ type, id }),
       });
-      if (!res.ok) throw new Error(`Notification non envoyée (${res.status}).`);
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error(detail.error === 'type inconnu' ? 'la fonction notify n’est pas à jour' : `erreur ${res.status}`);
+      }
       return res.json();
     },
   };
