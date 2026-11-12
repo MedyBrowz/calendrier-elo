@@ -51,10 +51,22 @@ async function act(promise, done) {
 function questionsForMe() {
   return (state.data.questions || []).filter((q) => q.to_user === state.me.id && !q.answer);
 }
+function messagesOf(qid) { return (state.data.messages || []).filter((m) => m.question_id === qid); }
+/** Dernier passage dans chaque conversation (mémorisé sur cet appareil). */
+function seenMap() { try { return JSON.parse(localStorage.getItem('conversations-vues') || '{}'); } catch (e) { return {}; } }
+function markSeen(qid) {
+  const map = seenMap();
+  map[qid] = new Date().toISOString();
+  try { localStorage.setItem('conversations-vues', JSON.stringify(map)); } catch (e) { /* stockage bloqué */ }
+}
+function unreadCount(qid) {
+  const seen = seenMap()[qid] || '';
+  return messagesOf(qid).filter((m) => m.from_user !== state.me.id && m.created_at > seen).length;
+}
 function updateQuestionBadge() {
   const button = document.querySelector('#tabs [data-tab="questions"]');
   if (!button || !state.data) return;
-  const n = questionsForMe().length;
+  const n = questionsForMe().length + (state.data.questions || []).filter((q) => unreadCount(q.id)).length;
   let badge = button.querySelector('.badge-dot');
   if (!n) { if (badge) badge.remove(); return; }
   if (!badge) { badge = document.createElement('span'); badge.className = 'badge-dot'; button.append(badge); }
@@ -141,22 +153,69 @@ function renderQuestions() {
     ${setupNeeded()}
     ${forMe.length ? `<div class="section-title">Pour toi</div>${forMe.map(questionToAnswer).join('')}` : ''}
     ${waiting.length ? `<div class="section-title">En attente de réponse</div>
-      <div class="list">${waiting.map((q) => `<div class="row" id="q-${q.id}">
-        <span class="main"><strong>${esc(q.text)}</strong>
-        <span class="sub">${esc(memberName(q.to_user))} n’a pas encore répondu · ${ago(q.created_at)}</span></span>
-        <button type="button" class="x" data-do="del-question" data-id="${q.id}" aria-label="Annuler la question">✕</button></div>`).join('')}</div>` : ''}
+      <div class="list">${waiting.map((q) => conversationRow(q, `${esc(memberName(q.to_user))} n’a pas encore répondu`)).join('')}</div>` : ''}
     ${answered.length ? `<div class="section-title">Réponses</div>
-      <div class="list">${answered.map((q) => `<div class="row" id="q-${q.id}">
-        <span class="main"><strong>${esc(q.text)}</strong>
-        <span class="answer">${esc(memberName(q.to_user))} : ${esc(q.answer)}</span>
-        <span class="sub">${ago(q.answered_at || q.created_at)}</span></span>
-        <button type="button" class="x" data-do="del-question" data-id="${q.id}" aria-label="Supprimer">✕</button></div>`).join('')}</div>` : ''}
+      <div class="list">${answered.map((q) => conversationRow(q, `<span class="answer">${esc(memberName(q.to_user))} : ${esc(q.answer)}</span>`)).join('')}</div>` : ''}
     ${!all.length ? emptyState('angora', 'Pose une question : elle arrive en notification sur le téléphone de l’autre.') : ''}`;
   if (duo.focusQuestion) {
-    const el = document.getElementById(`q-${duo.focusQuestion}`);
-    if (el) { el.classList.add('flash'); el.scrollIntoView({ block: 'center' }); }
+    const id = duo.focusQuestion;
     duo.focusQuestion = null;
+    if (all.some((q) => q.id === id)) threadSheet(id);
   }
+}
+/** Ligne d'une question : la toucher ouvre la conversation. */
+function conversationRow(q, status) {
+  const msgs = messagesOf(q.id);
+  const last = msgs[msgs.length - 1];
+  const unread = unreadCount(q.id);
+  return `<div class="row conv ${unread ? 'unread' : ''}" id="q-${q.id}" data-do="thread" data-id="${q.id}">
+    <span class="main"><strong>${esc(q.text)}</strong>${status}
+      ${last ? `<span class="sub preview">💬 ${esc(memberName(last.from_user))} : ${esc(last.text)}</span>` : ''}
+      <span class="sub">${ago(last ? last.created_at : q.answered_at || q.created_at)}${msgs.length ? ` · ${msgs.length} message${msgs.length > 1 ? 's' : ''}` : ''}</span></span>
+    ${unread ? `<span class="unread-dot">${unread}</span>` : '<span class="chev">›</span>'}
+  </div>`;
+}
+
+/** Conversation sous une question : question, réponse, puis messages ; chaque message notifie l'autre. */
+function threadSheet(qid) {
+  const q = (state.data.questions || []).find((x) => x.id === qid);
+  if (!q) { if ($('#thread')) closeSheet(); return; }
+  const draft = $('#thread-input') ? $('#thread-input').value : '';
+  const bubble = (from, text, time, id = null, extra = '') => `<div class="bubble ${from === state.me.id ? 'me' : ''} ${extra}">
+      <span class="who">${esc(memberName(from))} · ${ago(time)}</span><span class="txt">${esc(text)}</span>
+      ${id && from === state.me.id ? `<button type="button" class="bubble-x" data-do="del-msg" data-id="${id}" aria-label="Supprimer ce message">✕</button>` : ''}
+    </div>`;
+  const parts = [bubble(q.from_user, q.kind === 'choice' && q.options.length ? `${q.text}\n${q.options.map((o) => `• ${o}`).join('\n')}` : q.text, q.created_at, null, 'question-bubble')];
+  if (q.answer) parts.push(bubble(q.to_user, q.answer, q.answered_at || q.created_at, null, 'answer-bubble'));
+  messagesOf(qid).forEach((m) => parts.push(bubble(m.from_user, m.text, m.created_at, m.id)));
+  openSheet(`${sheetHead('Conversation', `${esc(memberName(q.from_user))} et ${esc(memberName(q.to_user))}`)}
+    <div class="thread" id="thread">${parts.join('')}</div>
+    ${!q.answer && q.to_user === state.me.id ? '<p class="muted note">Pour répondre à la question elle-même, utilise les choix dans l’onglet Questions.</p>' : ''}
+    ${state.data.messagesMissing ? '<p class="muted note">La mise à jour de la base (schema_v3.sql) est à installer pour discuter.</p>' : `
+    <div class="add-row"><input class="input" id="thread-input" maxlength="500" placeholder="Écrire un message…" autocomplete="off">
+      <button class="primary" type="submit">Envoyer</button></div>`}
+    <p class="error-text"></p>
+    <div class="actions"><button class="danger" type="button" data-do="del-thread" data-id="${qid}">Supprimer toute la conversation</button></div>`, async (form) => {
+    const input = form.querySelector('#thread-input');
+    const text = input ? input.value.trim() : '';
+    if (!text) throw new Error('Écris un message.');
+    const msg = await api.add('question_messages', { question_id: qid, text });
+    input.value = '';
+    api.notify('message', msg.id).catch(() => {});
+    return () => threadSheet(qid);
+  });
+  $('#sheet-form').dataset.thread = qid;
+  const input = $('#thread-input');
+  if (input && draft) { input.value = draft; input.focus(); }
+  const thread = $('#thread');
+  thread.scrollTop = thread.scrollHeight;
+  markSeen(qid);
+  updateQuestionBadge();
+}
+/** Appelé après chaque rechargement : met à jour la conversation ouverte (nouveau message de l'autre). */
+function refreshOpenThread() {
+  const open = $('#thread') && !$('#sheet').hidden && $('#sheet-form').dataset.thread;
+  if (open) threadSheet(open);
 }
 function questionToAnswer(q) {
   return `<div class="card question" id="q-${q.id}">
@@ -166,6 +225,7 @@ function questionToAnswer(q) {
       ? `<div class="choices">${q.options.map((o, i) => `<button type="button" class="choice" data-do="answer" data-id="${q.id}" data-option="${i}">${esc(o)}</button>`).join('')}</div>`
       : `<form class="add-row answer-form" data-id="${q.id}"><input class="input" maxlength="200" placeholder="Ta réponse…">
           <button class="primary" type="submit">Envoyer</button></form>`}
+    <button type="button" class="link left" data-do="thread" data-id="${q.id}">💬 Discuter${messagesOf(q.id).length ? ` (${messagesOf(q.id).length})` : ''}</button>
   </div>`;
 }
 
@@ -400,6 +460,17 @@ document.addEventListener('click', async (event) => {
       break;
     }
     case 'del-question': if (confirm('Supprimer cette question ?')) act(api.del('questions', { id })); break;
+    case 'thread': threadSheet(id); break;
+    case 'del-msg': {
+      const qid = $('#sheet-form').dataset.thread;
+      act(api.del('question_messages', { id }), () => threadSheet(qid));
+      break;
+    }
+    case 'del-thread':
+      if (!confirm('Supprimer la question et toute la conversation, pour vous deux ?')) break;
+      closeSheet();
+      act(api.del('questions', { id }), () => toast('Conversation supprimée.'));
+      break;
     case 'new-reminder': reminderSheet(null); break;
     case 'edit-reminder': reminderSheet((state.data.reminders || []).find((r) => r.id === id)); break;
     case 'vote': {

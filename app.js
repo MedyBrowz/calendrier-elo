@@ -172,6 +172,7 @@ function render() {
   else if (state.tab === 'lists') renderLists();
   else if (state.tab === 'questions') renderQuestions();
   else renderMore();
+  refreshOpenThread();
 }
 
 function workTag(w) {

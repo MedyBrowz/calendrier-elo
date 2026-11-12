@@ -12,6 +12,7 @@ const EXTRA_TABLES = {
   reminders: ['reminders', 'id,title,note,next_at,local_time,repeat,private,owner,active,last_sent_at', 'next_at'],
   ideas: ['vacation_ideas', 'id,title,note,done,created_by,created_at', 'created_at'],
   votes: ['vacation_votes', 'idea_id,user_id', 'idea_id'],
+  messages: ['question_messages', 'id,question_id,from_user,text,created_at', 'created_at'],
 };
 
 function createSupabaseApi(url, key) {
@@ -58,13 +59,14 @@ function createSupabaseApi(url, key) {
         fetchAll('events', 'id,title,start_date,end_date,start_time,end_time,location,note,color,created_by', 'start_date'),
         fetchAll('photos', 'id,event_id,path,width,height,size_bytes,created_at', 'created_at'),
       ]);
-      // Partie 2 : si elle n'est pas encore installée, le reste de l'appli continue de marcher.
+      // Parties 2 et 3 : une table pas encore installée n'empêche pas le reste de l'appli de marcher.
       const extra = {};
-      let missing = false;
+      const missing = [];
       await Promise.all(Object.entries(EXTRA_TABLES).map(async ([name, [table, cols, order]]) => {
-        try { extra[name] = await fetchAll(table, cols, order); } catch (e) { extra[name] = []; missing = true; }
+        try { extra[name] = await fetchAll(table, cols, order); } catch (e) { extra[name] = []; missing.push(name); }
       }));
-      return { members, work, events, photos, ...extra, extraMissing: missing };
+      return { members, work, events, photos, ...extra,
+        extraMissing: missing.some((n) => n !== 'messages'), messagesMissing: missing.includes('messages') };
     },
     /** onlyNew : ne touche pas aux jours déjà présents. */
     async saveWorkDays(rows, onlyNew = false) {
@@ -172,10 +174,16 @@ function createDemoApi() {
     ideas: [{ id: uid(), title: 'Rome', note: 'Printemps ?', done: false, created_by: 'demo-elo', created_at: stamp(500) },
             { id: uid(), title: 'Montagne en été', note: '', done: false, created_by: 'demo-moi', created_at: stamp(400) }],
     votes: [],
+    messages: [],
   });
   db.votes.push({ idea_id: db.ideas[0].id, user_id: 'demo-elo' });
-  const TABLE = { lists: 'lists', list_items: 'items', questions: 'questions', reminders: 'reminders', vacation_ideas: 'ideas', vacation_votes: 'votes' };
+  db.messages.push(
+    { id: uid(), question_id: db.questions[1].id, from_user: 'demo-moi', text: 'Ok, je fais à manger alors 🍝', created_at: stamp(55) },
+    { id: uid(), question_id: db.questions[1].id, from_user: 'demo-elo', text: 'Trop bien merci ❤️', created_at: stamp(3) },
+  );
+  const TABLE = { lists: 'lists', list_items: 'items', questions: 'questions', reminders: 'reminders', vacation_ideas: 'ideas', vacation_votes: 'votes', question_messages: 'messages' };
   const DEFAULTS = {
+    question_messages: { from_user: me.id },
     list_items: { done: false, created_by: me.id }, questions: { options: [], from_user: me.id, answer: null, answered_at: null },
     reminders: { repeat: 'none', private: false, owner: me.id, active: true, last_sent_at: null },
     vacation_ideas: { done: false, created_by: me.id }, vacation_votes: { user_id: me.id }, lists: { icon: '📝', position: 99 },
@@ -193,7 +201,7 @@ function createDemoApi() {
     async signOut() {},
     async changePassword() {},
     async version() { return version; },
-    async loadAll() { await wait(); return { ...copy(db), extraMissing: false }; },
+    async loadAll() { await wait(); return { ...copy(db), extraMissing: false, messagesMissing: false }; },
     async saveWorkDays(rows, onlyNew = false) {
       for (const r of rows) {
         const i = db.work.findIndex((w) => w.day === r.day);
@@ -235,6 +243,7 @@ function createDemoApi() {
       db[key] = db[key].filter((r) => !matches(r, match));
       if (table === 'lists') db.items = db.items.filter((i) => i.list_id !== match.id);
       if (table === 'vacation_ideas') db.votes = db.votes.filter((v) => v.idea_id !== match.id);
+      if (table === 'questions') db.messages = db.messages.filter((m) => m.question_id !== match.id);
       version++;
     },
     async savePush() {},

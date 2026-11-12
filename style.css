@@ -264,6 +264,26 @@ textarea.input { min-height: 70px; resize: vertical; }
 .heart.on { background: var(--accent-soft); color: var(--accent); }
 .flash { animation: flash 1.6s ease-out 1; }
 @keyframes flash { 0%, 40% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: var(--shadow); } }
+.row.conv { cursor: pointer; }
+.row.conv.unread { box-shadow: inset 4px 0 0 var(--accent), var(--shadow); }
+.row .preview { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .chev { color: var(--muted); font-size: 22px; flex: none; }
+.unread-dot { flex: none; background: var(--accent); color: #fff; border-radius: 999px; min-width: 22px; height: 22px; line-height: 22px; text-align: center; font-size: 12px; font-weight: 900; padding: 0 6px; }
+.link.left { align-self: flex-start; padding-left: 0; }
+.thread { display: flex; flex-direction: column; gap: 10px; max-height: 52vh; overflow-y: auto; overflow-x: hidden; padding: 12px 12px 6px 4px; margin: 8px 0; }
+.bubble .txt { white-space: pre-line; }
+.bubble {
+  position: relative; max-width: 82%; align-self: flex-start;
+  background: var(--card); border-radius: 18px 18px 18px 6px; padding: 8px 12px; box-shadow: var(--shadow); font-weight: 600;
+}
+.bubble.me { align-self: flex-end; background: var(--accent); color: #fff; border-radius: 18px 18px 6px 18px; }
+.bubble .who { display: block; font-size: 11px; font-weight: 800; opacity: .7; margin-bottom: 2px; }
+.bubble.question-bubble { border: 2px solid var(--accent); }
+.bubble.me.question-bubble { border-color: transparent; }
+.bubble.answer-bubble:not(.me) { background: var(--work-soft); }
+.bubble.me.answer-bubble { background: var(--work); }
+.bubble-x { position: absolute; top: -8px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: var(--text); color: var(--bg); font-size: 10px; padding: 0; opacity: .75; }
+.note { font-size: 12px; margin: 4px 0; }
 .tabs button { position: relative; }
 .badge-dot { position: absolute; top: 4px; left: calc(50% + 6px); background: var(--accent); color: #fff; border-radius: 999px; font-size: 10px; min-width: 17px; height: 17px; line-height: 17px; padding: 0 4px; font-weight: 900; }
 
